@@ -1,0 +1,7 @@
+Authlib==0.14.3
+base58~=2.0.0
+Flask~=1.1.2
+Flask-Limiter
+pycryptodome
+gunicorn
+requests
