@@ -2,12 +2,12 @@ import logging
 import os
 import re
 
+from flask import Flask, redirect, render_template, request, session, url_for, jsonify
+
+from attestation import Blake2Attestation
 from authlib.integrations.flask_client import OAuth
 from authlib.jose import jwt
 from authlib.oidc.core import CodeIDToken
-from flask import Flask, redirect, render_template, request, session, url_for
-
-from attestation import CmacAttestation
 
 logging.basicConfig(filename='app.log', level=logging.INFO)
 
@@ -17,7 +17,7 @@ app.config['SECRET_KEY'] = os.urandom(16)
 oauth = OAuth(app)
 oauth.register('jaccount')
 
-attestation = CmacAttestation(secret=bytes.fromhex(
+attestation = Blake2Attestation(secret=bytes.fromhex(
     app.config.get('ATTESTATION_SECRET')))
 
 qq_pattern = re.compile(r'[1-9]\d{4,}')
@@ -29,8 +29,7 @@ def check_qq(qq: str) -> bool:
 
 @app.before_request
 def login_required():
-    # print(request.full_path, session)
-    if request.path in [url_for('login'), url_for('authorize')]:
+    if request.path not in [url_for('cover_page'), url_for('generate')]:
         return None
 
     if 'user' not in session:
@@ -59,7 +58,8 @@ def authorize():
     # print(json.dumps(resp.json(), ensure_ascii=False, indent=True))
 
     claims = jwt.decode(token.get('id_token'),
-                        oauth.jaccount.client_secret, claims_cls=CodeIDToken)
+                        oauth.jaccount.client_secret,
+                        claims_cls=CodeIDToken)
     claims.validate()
     session['user'] = claims
 
@@ -76,6 +76,42 @@ def generate():
             return str(e), 500
     else:
         return '填写错误，请输入正确的QQ号', 400
+
+
+@app.route('/verify', methods=['POST'])
+def verify():
+    qq = request.json.get('qq_number')
+    token = request.json.get('token')
+
+    if qq == None or token == None:
+        return jsonify({
+            "success": False,
+            "message": "Compulsory parameters lost"
+        }), 400
+
+    if not check_qq(qq):
+        return jsonify({
+            "success": False,
+            "message": "Invalid QQ number"
+        }), 400
+
+    try:
+        timestamp = attestation.verify(qq, token)
+        if timestamp == None:
+            return jsonify({
+                "success": False,
+                "message": "Verification Failed"
+            })
+        else:
+            return jsonify({
+                "success": True,
+                "message": timestamp.isoformat()
+            })
+    except (UnicodeEncodeError, ValueError) as e:
+        return jsonify({
+            "success": False,
+            "message": "Invalid token"
+        }), 400
 
 
 if __name__ == '__main__':
