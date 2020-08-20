@@ -20,11 +20,11 @@ oauth.register('jaccount')
 attestation = CmacAttestation(secret=bytes.fromhex(
     app.config.get('ATTESTATION_SECRET')))
 
-qq_pattern = re.compile(r'[1-9]\d{4,}')
+qq_pattern = re.compile(r'^[1-9]\d{4,}')
 
 
 def check_qq(qq: str) -> bool:
-    return True if qq_pattern.match(qq) else False
+    return True if qq_pattern.fullmatch(qq) else False
 
 
 @app.before_request
