@@ -14,6 +14,9 @@ logging.basicConfig(filename='app.log', level=logging.INFO)
 app = Flask(__name__)
 app.config.from_json('config.json')
 app.config['SECRET_KEY'] = os.urandom(16)
+app.config.update(dict(
+  PREFERRED_URL_SCHEME = 'https'
+))
 oauth = OAuth(app)
 oauth.register('jaccount')
 
