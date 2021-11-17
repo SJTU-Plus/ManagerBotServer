@@ -1,4 +1,4 @@
-# ManagerBotServer
+# ManagerBotServer (Deprecated)
 
 ManagerBotServer 是 [ManagerBot](https://github.com/dujiajun/ManagerBot) 的配套网页。
 
